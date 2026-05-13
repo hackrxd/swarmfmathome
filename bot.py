@@ -95,5 +95,14 @@ async def queue(ctx):
 
     await ctx.send(message)
 
+@bot.command()
+async def join(ctx):
+    if ctx.author.voice is None:
+        await ctx.send("You need to be in a voice channel to use this command.")
+        return
+    channel = ctx.author.voice.channel
+    await channel.connect()
+
+
 
 bot.run(os.getenv("BOT_TOKEN"))
