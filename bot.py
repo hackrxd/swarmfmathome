@@ -13,7 +13,7 @@ bot = commands.Bot(command_prefix='!eliv ', intents=intents)
 emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
 
 priority_queue = []
-queue = []
+song_queue = []
 result_cache = {}  # Map message IDs to search results
 reacted_users = set()  # Track (message_id, user_id) pairs to prevent duplicate adds
 
@@ -83,15 +83,15 @@ async def search(ctx, category, *, query):
         await msg.add_reaction(emojis[i])
 
 @bot.command()
-async def queue(ctx):
-    if not priority_queue and not queue:
+async def queuelist(ctx):
+    if not priority_queue and not song_queue:
         await ctx.send("The queue is currently empty.")
         return
-    message = "**Current Queue:**\n"
+    message = ""
     if priority_queue:
         message += "**Priority Queue:**\n" + "\n".join(f"- {song}" for song in priority_queue) + "\n"
-    if queue:
-        message += "**Queue:**\n" + "\n".join(f"- {song}" for song in queue) + "\n"
+    if song_queue:
+        message += "**Queue:**\n" + "\n".join(f"- {song}" for song in song_queue) + "\n"
 
     await ctx.send(message)
 
@@ -111,22 +111,33 @@ async def play(ctx):
     message = await ctx.send("Starting playback...")
     if priority_queue:
         song = priority_queue.pop(0)
-    elif queue:
-        song = queue.pop(0)
+    elif song_queue:
+        song = song_queue.pop(0)
     else:
         await message.edit(content="Generating queue...")
-        allaudio = []
-        allaudio.append(os.listdir("audio/evil"))
-        allaudio.append(os.listdir("audio/neuro"))
-        allaudio.append(os.listdir("audio/extra"))
-        allaudio.append(os.listdir("audio/anniversary"))
-        allaudio.append(os.listdir("audio/duet"))
-        while queue < 5:
+        # Build list of non-empty audio folders
+        allaudio = [
+            files for files in [
+                os.listdir("audio/evil"),
+                os.listdir("audio/neuro"),
+                os.listdir("audio/extra"),
+                os.listdir("audio/anniversary"),
+                os.listdir("audio/duet")
+            ] if files  # Only include non-empty folders
+        ]
+        
+        if not allaudio:
+            await message.edit(content="Error: No audio files found.")
+            return
+        
+        while len(song_queue) < 5:
             category = random.choice(allaudio)
-            song = random.choice(category)
-            if song not in queue:
-                queue.append(song)
-        return
+            song_choice = random.choice(category)
+            if song_choice not in song_queue:
+                song_queue.append(song_choice)
+        
+        # Now play from the generated queue
+        song = song_queue.pop(0)
     
     category = None
     for cat, path in {
