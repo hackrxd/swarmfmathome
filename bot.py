@@ -82,7 +82,7 @@ async def search(ctx, category, *, query):
     for i in range(len(results)):
         await msg.add_reaction(emojis[i])
 
-@bot.command()
+@bot.command(name="queue")
 async def queuelist(ctx):
     if not priority_queue and not song_queue:
         await ctx.send("The queue is currently empty.")
