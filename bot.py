@@ -34,6 +34,14 @@ async def search(ctx, *, category, query):
     if len(results) > 9:
         results = random.sample(results, 9)
         overflow = True
+    
+    # Build message with reactions
+    message_text = "**Search results:**\n" + "\n".join(f"{emojis[i]} {result}" for i, result in enumerate(results))
     if overflow:
-        await ctx.send("**Search results:**\n " + "\n".join(f"{i + 1}. {result}" for i, result in enumerate(results)) + "\n\n -# too many results, try being a little more specific because i don't know what you're talking about.")
-    await ctx.send("**Search results:**\n " + "\n".join(f"{i + 1}. {result}" for i, result in enumerate(results)))
+        message_text += "\n\n-# too many results, try being a little more specific because i don't know what you're talking about."
+    
+    msg = await ctx.send(message_text)
+    
+    # Add emoji reactions
+    for i in range(len(results)):
+        await msg.add_reaction(emojis[i])
