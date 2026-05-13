@@ -103,6 +103,49 @@ async def join(ctx):
     channel = ctx.author.voice.channel
     await channel.connect()
 
-
+@bot.command()
+async def play(ctx):
+    if ctx.voice_client is None:
+        await ctx.send("I need to be in a voice channel to play music. Use `!eliv join` to invite me.")
+        return
+    message = await ctx.send("Starting playback...")
+    if priority_queue:
+        song = priority_queue.pop(0)
+    elif queue:
+        song = queue.pop(0)
+    else:
+        await message.edit(content="Generating queue...")
+        allaudio = []
+        allaudio.append(os.listdir("audio/evil"))
+        allaudio.append(os.listdir("audio/neuro"))
+        allaudio.append(os.listdir("audio/extra"))
+        allaudio.append(os.listdir("audio/anniversary"))
+        allaudio.append(os.listdir("audio/duet"))
+        while queue < 5:
+            category = random.choice(allaudio)
+            song = random.choice(category)
+            if song not in queue:
+                queue.append(song)
+        return
+    
+    category = None
+    for cat, path in {
+        "evil": "audio/evil",
+        "neuro": "audio/neuro",
+        "extra": "audio/extra",
+        "anniversary": "audio/anniversary",
+        "duet": "audio/duet"
+    }.items():
+        if os.path.exists(os.path.join(path, song)):
+            category = cat
+            break
+    
+    if category is None:
+        await ctx.send(f"Error: Could not find the file for **{song}**. <@759167810814476319>")
+        return
+    
+    source = discord.FFmpegPCMAudio(os.path.join(path, song))
+    ctx.voice_client.play(source)
+    await message.edit(content=f"Now playing: **{song}**")
 
 bot.run(os.getenv("BOT_TOKEN"))
