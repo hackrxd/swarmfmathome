@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import asyncio
 import discord
 import dotenv
 from discord.ext import commands
@@ -16,6 +17,64 @@ priority_queue = []
 song_queue = []
 result_cache = {}  # Map message IDs to search results
 reacted_users = set()  # Track (message_id, user_id) pairs to prevent duplicate adds
+now_playing_message = None  # Track the message showing current song
+is_playing = False  # Track if currently playing
+
+async def play_next_song(voice_client):
+    """Play the next song in the queue"""
+    global is_playing, now_playing_message
+    
+    if not voice_client or not voice_client.is_connected():
+        return
+    
+    # Refill queue if low
+    if len(song_queue) < 3:
+        allaudio = [
+            files for files in [
+                os.listdir("audio/evil"),
+                os.listdir("audio/neuro"),
+                os.listdir("audio/extra"),
+                os.listdir("audio/anniversary"),
+                os.listdir("audio/duet")
+            ] if files
+        ]
+        while len(song_queue) < 5 and allaudio:
+            category = random.choice(allaudio)
+            song_choice = random.choice(category)
+            if song_choice not in song_queue:
+                song_queue.append(song_choice)
+    
+    # Pick next song
+    if priority_queue:
+        song = priority_queue.pop(0)
+    elif song_queue:
+        song = song_queue.pop(0)
+    else:
+        is_playing = False
+        return
+    
+    # Find song file
+    category = None
+    for cat, path in {
+        "evil": "audio/evil",
+        "neuro": "audio/neuro",
+        "extra": "audio/extra",
+        "anniversary": "audio/anniversary",
+        "duet": "audio/duet"
+    }.items():
+        if os.path.exists(os.path.join(path, song)):
+            category = cat
+            break
+    
+    if category is None:
+        # Skip to next if file not found
+        await play_next_song(voice_client)
+        return
+    
+    # Play the song
+    source = discord.FFmpegPCMAudio(os.path.join(path, song))
+    voice_client.play(source, after=lambda e: asyncio.create_task(play_next_song(voice_client)))
+    is_playing = True
 
 @bot.event
 async def on_reaction_add(reaction, user):
@@ -108,14 +167,15 @@ async def play(ctx):
     if ctx.voice_client is None:
         await ctx.send("I need to be in a voice channel to play music. Use `!eliv join` to invite me.")
         return
-    message = await ctx.send("Starting playback...")
-    if priority_queue:
-        song = priority_queue.pop(0)
-    elif song_queue:
-        song = song_queue.pop(0)
-    else:
-        await message.edit(content="Generating queue...")
-        # Build list of non-empty audio folders
+    
+    global is_playing
+    
+    if is_playing and ctx.voice_client.is_playing():
+        await ctx.send("Already playing! Use `!eliv skip` to skip or check `!eliv queue`.")
+        return
+    
+    # Generate initial queue if empty
+    if not priority_queue and not song_queue:
         allaudio = [
             files for files in [
                 os.listdir("audio/evil"),
@@ -123,40 +183,38 @@ async def play(ctx):
                 os.listdir("audio/extra"),
                 os.listdir("audio/anniversary"),
                 os.listdir("audio/duet")
-            ] if files  # Only include non-empty folders
+            ] if files
         ]
         
-        if not allaudio:
-            await message.edit(content="Error: No audio files found.")
-            return
-        
-        while len(song_queue) < 5:
+        while len(song_queue) < 5 and allaudio:
             category = random.choice(allaudio)
             song_choice = random.choice(category)
             if song_choice not in song_queue:
                 song_queue.append(song_choice)
-        
-        # Now play from the generated queue
-        song = song_queue.pop(0)
     
-    category = None
-    for cat, path in {
-        "evil": "audio/evil",
-        "neuro": "audio/neuro",
-        "extra": "audio/extra",
-        "anniversary": "audio/anniversary",
-        "duet": "audio/duet"
-    }.items():
-        if os.path.exists(os.path.join(path, song)):
-            category = cat
-            break
-    
-    if category is None:
-        await ctx.send(f"Error: Could not find the file for **{song}**. <@759167810814476319>")
+    await ctx.send("▶️ Starting playback...")
+    await play_next_song(ctx.voice_client)
+
+@bot.command()
+async def skip(ctx):
+    if ctx.voice_client is None or not ctx.voice_client.is_playing():
+        await ctx.send("Nothing is playing.")
         return
-    
-    source = discord.FFmpegPCMAudio(os.path.join(path, song))
-    ctx.voice_client.play(source)
-    await message.edit(content=f"Now playing: **{song}**")
+    ctx.voice_client.stop()
+    await ctx.send("⏭️ Skipped to next song.")
+
+@bot.command()
+async def stop(ctx):
+    if ctx.voice_client is None:
+        await ctx.send("I'm not in a voice channel.")
+        return
+    if ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+    await ctx.send("⏹️ Stopped playback.")
+
+@bot.command()
+async def restartandupdate(ctx):
+    await ctx.send("Bot will restart after this song finishes to apply code updates.")
+    restart = True
 
 bot.run(os.getenv("BOT_TOKEN"))
