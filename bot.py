@@ -2,7 +2,10 @@ import json
 import os
 import random
 import asyncio
+from pathlib import Path
 import discord
+import subprocess
+import sys
 import dotenv
 from discord.ext import commands
 
@@ -19,6 +22,7 @@ result_cache = {}  # Map message IDs to search results
 reacted_users = set()  # Track (message_id, user_id) pairs to prevent duplicate adds
 now_playing_message = None  # Track the message showing current song
 is_playing = False  # Track if currently playing
+restart = False  # Flag to trigger restart after current song
 
 async def play_next_song(voice_client):
     """Play the next song in the queue"""
@@ -26,6 +30,20 @@ async def play_next_song(voice_client):
     
     if not voice_client or not voice_client.is_connected():
         return
+    
+    if restart:
+        script_location = Path(__file__).resolve().parent
+        await voice_client.disconnect()
+        # git pull in script directory
+        subprocess.run(
+            ["git", "pull"], 
+            cwd=script_location, 
+            capture_output=True, 
+            text=True, 
+            check=True
+        )
+        # Restart the script
+        os.execv(sys.executable, ['python'] + sys.argv)
     
     # Refill queue if low
     if len(song_queue) < 3:
