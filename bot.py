@@ -23,3 +23,17 @@ async def search(ctx, *, category, query):
     if not os.path.exists(category_path):
         await ctx.send(f"Error: hackr was too stupid to write the actual category path so now you have to suffer for it XD")
         return
+    results = []
+    for file in os.listdir(category_path):
+        if query.lower() in file.lower():
+            results.append(file)
+    if not results:
+        await ctx.send("nothing was found (probably becuase you speld wong)")
+        return
+    overflow = False
+    if len(results) > 9:
+        results = random.sample(results, 9)
+        overflow = True
+    if overflow:
+        await ctx.send("**Search results:**\n " + "\n".join(f"{i + 1}. {result}" for i, result in enumerate(results)) + "\n\n -# too many results, try being a little more specific because i don't know what you're talking about.")
+    await ctx.send("**Search results:**\n " + "\n".join(f"{i + 1}. {result}" for i, result in enumerate(results)))
