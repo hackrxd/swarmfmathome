@@ -101,12 +101,16 @@ async def play_next_song(voice_client):
         # Skip to next if file not found
         await play_next_song(voice_client)
         return
-
+    #send message about now playing
+    channel = 1441195017938141325
+    channel_obj = bot.get_channel(channel)
+    channel_obj.send(f"Now playing: **{song}**")
     # Play the song
     source = discord.FFmpegPCMAudio(song_path)
     loop = asyncio.get_event_loop()
     voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next_song(voice_client), loop))
     is_playing = True
+
 
 
 @bot.event
