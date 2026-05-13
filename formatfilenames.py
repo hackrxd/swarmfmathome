@@ -54,7 +54,33 @@ def remove_dates(path="audio"):
 
     return renamed
 
+def addEvil():
+    for file in os.listdir("audio/evil"):
+        if not file.endswith("(Evil) .mp3"):
+            os.rename(
+                os.path.join("audio/evil", file),
+                os.path.join("audio/evil", file.replace(".mp3", " (Evil) .mp3"))
+            )
+def addNeuro():
+    for file in os.listdir("audio/neuro"):
+        if not file.endswith("(Neuro) .mp3"):
+            os.rename(
+                os.path.join("audio/neuro", file),
+                os.path.join("audio/neuro", file.replace(".mp3", " (Neuro) .mp3"))
+            )
+def addDuet():
+    for file in os.listdir("audio/duet"):
+        if not file.endswith("(Duet) .mp3"):
+            os.rename(
+                os.path.join("audio/duet", file),
+                os.path.join("audio/duet", file.replace(".mp3", " (Duet) .mp3"))
+            )
+
+
 
 if __name__ == "__main__":
+    addEvil()
+    addNeuro()
+    addDuet()
     changed = remove_dates()
     print(f"Total renamed: {len(changed)}")
