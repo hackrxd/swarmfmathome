@@ -2,7 +2,10 @@ import json
 import os
 import random
 import discord
+import dotenv
 from discord.ext import commands
+
+dotenv.load_dotenv()
 
 bot = commands.Bot(command_prefix='!eliv')
 
@@ -45,3 +48,5 @@ async def search(ctx, *, category, query):
     # Add emoji reactions
     for i in range(len(results)):
         await msg.add_reaction(emojis[i])
+
+bot.run(os.getenv("BOT_TOKEN"))
