@@ -104,7 +104,8 @@ async def play_next_song(voice_client):
 
     # Play the song
     source = discord.FFmpegPCMAudio(song_path)
-    voice_client.play(source, after=lambda e: asyncio.create_task(play_next_song(voice_client)))
+    loop = asyncio.get_event_loop()
+    voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next_song(voice_client), loop))
     is_playing = True
 
 
