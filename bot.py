@@ -60,7 +60,7 @@ async def search(ctx, category, *, query):
     results = [f for f in os.listdir(category_path) if query.lower() in f.lower()]
     
     if not results:
-        await ctx.send("nothing was found (probably because you spelled it wrong)")
+        await ctx.send("nothing was found (probably because you spelt it wongly)")
         return
     
     # Limit to 9 results
