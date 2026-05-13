@@ -112,6 +112,17 @@ async def play_next_song(voice_client):
     is_playing = True
 
 
+@bot.event
+async def on_ready():
+    # join voice and start playing immediately on startup
+    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    print('------')
+    # Join voice channel and start playing immediately
+    channel = 1432156169203617802
+    channel_obj = bot.get_channel(channel)
+    if channel_obj and isinstance(channel_obj, discord.VoiceChannel):
+        voice_client = await channel_obj.connect()
+        await play_next_song(voice_client)
 
 @bot.event
 async def on_reaction_add(reaction, user):
