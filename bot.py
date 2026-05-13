@@ -12,6 +12,32 @@ bot = commands.Bot(command_prefix='!eliv ', intents=intents)
 
 emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
 
+priority_queue = []
+queue = []
+result_cache = {}  # Map message IDs to search results
+reacted_users = set()  # Track (message_id, user_id) pairs to prevent duplicate adds
+
+@bot.event
+async def on_reaction_add(reaction, user):
+    """Add song to queue when user reacts with emoji"""
+    if user.bot or reaction.message.id not in result_cache:
+        return
+    
+    user_reaction_key = (reaction.message.id, user.id)
+    if user_reaction_key in reacted_users:
+        return  # Already added this song
+    
+    try:
+        emoji_index = emojis.index(str(reaction.emoji))
+        results = result_cache[reaction.message.id]
+        if emoji_index < len(results):
+            song = results[emoji_index]
+            priority_queue.append(song)
+            reacted_users.add(user_reaction_key)
+            await reaction.message.channel.send(f"✓ Added **{song}** to priority queue")
+    except ValueError:
+        pass
+
 @bot.command()
 async def search(ctx, category, *, query):
     categories = {
@@ -21,34 +47,36 @@ async def search(ctx, category, *, query):
         "anniversary": "audio/anniversary",
         "duet": "audio/duet"
     }
+    
     if category not in categories:
         await ctx.send("Invalid category. Please choose from: evil, neuro, extra, anniversary, duet.")
-        print(f"User {ctx.author} attempted to search with invalid category: {category}")
         return
+    
     category_path = categories[category]
     if not os.path.exists(category_path):
-        await ctx.send(f"Error: hackr was too stupid to write the actual category path so now you have to suffer for it XD. actually wait i can ping him about it. <@759167810814476319>")
+        await ctx.send(f"Error: Category path not found. <@759167810814476319>")
         return
-    results = []
-    for file in os.listdir(category_path):
-        if query.lower() in file.lower():
-            results.append(file)
+    
+    results = [f for f in os.listdir(category_path) if query.lower() in f.lower()]
+    
     if not results:
-        await ctx.send("nothing was found (probably becuase you speld wong)")
-        print(f"User {ctx.author} searched for '{query}' in category '{category}' but found no results.")
+        await ctx.send("nothing was found (probably because you spelled it wrong)")
         return
-    overflow = False
+    
+    # Limit to 9 results
     if len(results) > 9:
         results = random.sample(results, 9)
         overflow = True
+    else:
+        overflow = False
     
-    # Build message with reactions
+    # Send exactly ONE message
     message_text = "**Search results:**\n" + "\n".join(f"{emojis[i]} {result}" for i, result in enumerate(results))
     if overflow:
-        message_text += "\n\n-# too many results, try being a little more specific because i don't know what you're talking about."
-    print(f"User {ctx.author} searched for '{query}' in category '{category}' and found {len(results)} results.")
+        message_text += "\n\n-# too many results, try being a little more specific"
     
     msg = await ctx.send(message_text)
+    result_cache[msg.id] = results
     
     # Add emoji reactions
     for i in range(len(results)):
