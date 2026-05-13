@@ -20,3 +20,6 @@ async def search(ctx, *, category, query):
         await ctx.send("Invalid category. Please choose from: evil, neuro, extra, anniversary.")
         return
     category_path = categories[category]
+    if not os.path.exists(category_path):
+        await ctx.send(f"Error: hackr was too stupid to write the actual category path so now you have to suffer for it XD")
+        return
