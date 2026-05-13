@@ -104,7 +104,7 @@ async def play_next_song(voice_client):
     #send message about now playing
     channel = 1441195017938141325
     channel_obj = bot.get_channel(channel)
-    channel_obj.send(f"Now playing: **{song}**")
+    await channel_obj.send(f"Now playing: **{song}**")
     # Play the song
     source = discord.FFmpegPCMAudio(song_path)
     loop = asyncio.get_event_loop()
